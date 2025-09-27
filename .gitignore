@@ -1,0 +1,42 @@
+# Laravel
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+docker-compose.override.yml
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/.idea
+/.vscode
+
+# Database
+database/database.sqlite
+
+# Logs
+storage/logs/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Production environment files (keep templates)
+.env.local
+.env.staging
+
+# Windows
+nul
+
+# Temp files
+*.tmp

@@ -1,0 +1,60 @@
+name: rent-tracker
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: your-username/rent-tracker
+    branch: main
+  run_command: |
+    cp .env.production .env
+    php artisan key:generate --force
+    php artisan migrate --force
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    php-fpm
+  environment_slug: php
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 8080
+  routes:
+  - path: /
+  health_check:
+    http_path: /
+  envs:
+  - key: APP_ENV
+    value: production
+  - key: APP_DEBUG
+    value: "false"
+  - key: LOG_LEVEL
+    value: error
+
+- name: worker
+  source_dir: /
+  github:
+    repo: your-username/rent-tracker
+    branch: main
+  run_command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+  environment_slug: php
+  instance_count: 1
+  instance_size_slug: basic-xxs
+
+databases:
+- name: rent-tracker-db
+  engine: PG
+  version: "15"
+
+- name: rent-tracker-redis
+  engine: REDIS
+  version: "7"
+
+jobs:
+- name: scheduler
+  source_dir: /
+  github:
+    repo: your-username/rent-tracker
+    branch: main
+  run_command: php artisan schedule:run
+  environment_slug: php
+  kind: CRON
+  cron: "* * * * *"
