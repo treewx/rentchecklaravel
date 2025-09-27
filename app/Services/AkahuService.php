@@ -11,8 +11,8 @@ use Carbon\Carbon;
 class AkahuService
 {
     private string $baseUrl;
-    private string $clientId;
-    private string $clientSecret;
+    private ?string $clientId;
+    private ?string $clientSecret;
 
     public function __construct()
     {
@@ -23,6 +23,10 @@ class AkahuService
 
     public function getAuthorizationUrl(string $redirectUri, string $state = null): string
     {
+        if (!$this->clientId) {
+            throw new \Exception('Akahu client ID not configured');
+        }
+
         $params = [
             'client_id' => $this->clientId,
             'response_type' => 'code',
@@ -39,6 +43,10 @@ class AkahuService
 
     public function exchangeCodeForToken(string $code, string $redirectUri): array
     {
+        if (!$this->clientId || !$this->clientSecret) {
+            throw new \Exception('Akahu credentials not configured');
+        }
+
         $response = Http::post($this->baseUrl . '/oauth/token', [
             'grant_type' => 'authorization_code',
             'client_id' => $this->clientId,
@@ -56,6 +64,10 @@ class AkahuService
 
     public function refreshToken(string $refreshToken): array
     {
+        if (!$this->clientId || !$this->clientSecret) {
+            throw new \Exception('Akahu credentials not configured');
+        }
+
         $response = Http::post($this->baseUrl . '/oauth/token', [
             'grant_type' => 'refresh_token',
             'client_id' => $this->clientId,
