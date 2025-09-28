@@ -6,4 +6,4 @@ nixPkgs = ['php82', 'php82Packages.composer']
 cmds = ['composer install --no-dev --optimize-autoloader --no-scripts']
 
 [start]
-cmd = 'composer run-script post-autoload-dump && php artisan serve --host=0.0.0.0 --port=$PORT'
+cmd = 'php artisan serve --host=0.0.0.0 --port=$PORT'
