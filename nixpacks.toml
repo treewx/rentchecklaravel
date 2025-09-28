@@ -1,9 +1,12 @@
-# Fresh Railway configuration to avoid cache issues
+# Railway deployment with SQLite
 [phases.setup]
-nixPkgs = ['php82', 'php82Packages.composer', 'mysql80']
+nixPkgs = ['php82', 'php82Packages.composer']
 
 [phases.install]
-cmds = ['composer install --no-dev --optimize-autoloader --no-scripts']
+cmds = [
+    'composer install --no-dev --optimize-autoloader --no-scripts',
+    'touch database/database.sqlite'
+]
 
 [start]
-cmd = 'php -r "echo \"Waiting for database...\"; $i = 0; while($i < 30) { try { new PDO(getenv(\"DATABASE_URL\")); echo \"Database ready!\"; break; } catch(Exception $e) { echo \".\"; sleep(2); $i++; } } if($i >= 30) { echo \"Database timeout\"; exit(1); }" && php artisan serve --host=0.0.0.0 --port=$PORT'
+cmd = 'php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT'
