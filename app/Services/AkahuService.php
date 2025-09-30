@@ -127,18 +127,38 @@ class AkahuService
             $this->refreshCredentials($credentials);
         }
 
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $credentials->access_token,
+        // Build headers - for manual tokens, use both app_token and user_token
+        $headers = [
             'Accept' => 'application/json',
-        ])->$method($this->baseUrl . $endpoint);
+        ];
+
+        if ($credentials->app_token) {
+            // Using manual tokens - add both as headers
+            $headers['X-Akahu-ID'] = $credentials->app_token;
+            $headers['Authorization'] = 'Bearer ' . $credentials->access_token;
+        } else {
+            // Using OAuth - just use Bearer token
+            $headers['Authorization'] = 'Bearer ' . $credentials->access_token;
+        }
+
+        \Log::info('Making Akahu API request', [
+            'method' => $method,
+            'endpoint' => $endpoint,
+            'has_app_token' => !empty($credentials->app_token),
+            'has_user_token' => !empty($credentials->access_token)
+        ]);
+
+        $response = Http::withHeaders($headers)->$method($this->baseUrl . $endpoint);
+
+        \Log::info('Akahu API response', [
+            'status' => $response->status(),
+            'body' => $response->body()
+        ]);
 
         if ($response->status() === 401) {
             $this->refreshCredentials($credentials);
 
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $credentials->access_token,
-                'Accept' => 'application/json',
-            ])->$method($this->baseUrl . $endpoint);
+            $response = Http::withHeaders($headers)->$method($this->baseUrl . $endpoint);
         }
 
         return $response;
