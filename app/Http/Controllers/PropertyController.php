@@ -121,13 +121,9 @@ class PropertyController extends Controller
         $startDate = Carbon::now()->subDays(60);
         $endDate = Carbon::now();
 
-        try {
-            $accounts = $akahuService->getAccounts($user);
-            \Log::info('Accounts fetched: ' . count($accounts));
-        } catch (\Exception $e) {
-            \Log::error('Failed to get accounts: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch accounts: ' . $e->getMessage()], 500);
-        }
+        // Use stored accounts from database instead of making API call
+        $accounts = $user->akahuCredentials->accounts ?? [];
+        \Log::info('Accounts from database: ' . count($accounts));
 
         if (empty($accounts)) {
             return response()->json([
