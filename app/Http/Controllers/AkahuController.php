@@ -38,18 +38,28 @@ class AkahuController extends Controller
         $user = auth()->user();
 
         // Store the tokens manually
-        AkahuCredential::updateOrCreate(
+        $credential = AkahuCredential::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'access_token' => $request->user_token,
                 'refresh_token' => null, // Not needed for manual tokens
                 'expires_at' => null, // Manual tokens don't expire typically
-                'accounts' => [], // Will be populated when needed
+                'accounts' => [], // Will be populated immediately below
                 'app_token' => $request->app_token, // Store app token separately
             ]
         );
 
-        return redirect()->route('dashboard')->with('success', 'Akahu tokens added successfully');
+        // Fetch and store accounts immediately after connecting
+        try {
+            $accounts = $this->akahuService->getAccounts($user);
+            $credential->update(['accounts' => $accounts]);
+            Log::info('Fetched ' . count($accounts) . ' accounts for user ' . $user->id);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch Akahu accounts: ' . $e->getMessage());
+            return redirect()->route('dashboard')->with('warning', 'Akahu tokens added but failed to fetch accounts. Please try reconnecting.');
+        }
+
+        return redirect()->route('dashboard')->with('success', 'Akahu connected successfully with ' . count($accounts) . ' account(s)');
     }
 
     public function callback(Request $request)
