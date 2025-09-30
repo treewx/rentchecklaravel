@@ -184,6 +184,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('transactionItems').innerHTML = '';
 
         // Fetch transactions
+        const requestData = {
+            rent_amount: rentAmount
+        };
+        console.log('Making request to:', '{{ route('properties.transactions-for-keyword') }}');
+        console.log('Request data:', requestData);
+        console.log('CSRF Token:', '{{ csrf_token() }}');
+
         fetch('{{ route('properties.transactions-for-keyword') }}', {
             method: 'POST',
             headers: {
@@ -192,19 +199,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({
-                rent_amount: rentAmount
-            })
+            body: JSON.stringify(requestData)
         })
         .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+
             if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || data.message || 'Request failed with status ' + response.status);
+                return response.text().then(text => {
+                    console.error('Response body:', text);
+                    try {
+                        const data = JSON.parse(text);
+                        throw new Error(data.error || data.message || 'Request failed with status ' + response.status);
+                    } catch (e) {
+                        throw new Error('Server returned ' + response.status + ': ' + text.substring(0, 200));
+                    }
                 });
             }
             return response.json();
         })
         .then(data => {
+            console.log('Success response:', data);
             document.getElementById('transactionLoadingMsg').classList.add('d-none');
 
             if (data.error) {
@@ -280,9 +295,13 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('transactionList').classList.remove('d-none');
         })
         .catch(error => {
+            console.error('Full error:', error);
             document.getElementById('transactionLoadingMsg').classList.add('d-none');
             document.getElementById('transactionErrorMsg').textContent = 'Error loading transactions: ' + error.message;
             document.getElementById('transactionErrorMsg').classList.remove('d-none');
+
+            // Also alert for immediate visibility
+            alert('ERROR: ' + error.message);
         });
     });
 });
