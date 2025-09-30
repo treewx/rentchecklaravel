@@ -30,8 +30,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/disconnect', [AkahuController::class, 'disconnect'])->name('disconnect');
     });
 
-    Route::resource('properties', PropertyController::class);
     Route::post('/properties/transactions-for-keyword', [PropertyController::class, 'getTransactionsForKeyword'])->name('properties.transactions-for-keyword');
+    Route::resource('properties', PropertyController::class);
 
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
