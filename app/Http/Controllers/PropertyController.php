@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Property;
 use App\Models\RentCheck;
+use App\Services\AkahuService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class PropertyController extends Controller
@@ -96,6 +98,75 @@ class PropertyController extends Controller
 
         return redirect()->route('properties.index')
             ->with('success', 'Property deleted successfully');
+    }
+
+    public function getTransactionsForKeyword(Request $request)
+    {
+        $request->validate([
+            'rent_amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $user = auth()->user();
+
+        if (!$user->akahuCredentials) {
+            return response()->json(['error' => 'No Akahu credentials found'], 400);
+        }
+
+        $rentAmount = (float) $request->rent_amount;
+        $tolerance = $rentAmount * 0.2; // 20% tolerance
+
+        $akahuService = app(AkahuService::class);
+
+        // Get transactions from the last 60 days
+        $startDate = Carbon::now()->subDays(60);
+        $endDate = Carbon::now();
+
+        $accounts = $akahuService->getAccounts($user);
+        $allTransactions = [];
+
+        foreach ($accounts as $account) {
+            try {
+                $accountTransactions = $akahuService->getTransactions(
+                    $user,
+                    $account['_id'],
+                    $startDate,
+                    $endDate
+                );
+                $allTransactions = array_merge($allTransactions, $accountTransactions);
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        // Filter transactions: negative amounts (outgoing) within tolerance of rent amount
+        $filteredTransactions = array_filter($allTransactions, function($transaction) use ($rentAmount, $tolerance) {
+            $amount = abs((float) $transaction['amount']);
+            return $transaction['amount'] < 0 &&
+                   $amount >= ($rentAmount - $tolerance) &&
+                   $amount <= ($rentAmount + $tolerance);
+        });
+
+        // Sort by date descending
+        usort($filteredTransactions, function($a, $b) {
+            return strtotime($b['date']) - strtotime($a['date']);
+        });
+
+        // Format for response
+        $formattedTransactions = array_map(function($transaction) {
+            return [
+                'id' => $transaction['_id'],
+                'date' => $transaction['date'],
+                'amount' => abs((float) $transaction['amount']),
+                'description' => $transaction['description'] ?? '',
+                'merchant' => $transaction['merchant']['name'] ?? '',
+                'reference' => $transaction['meta']['reference'] ?? '',
+                'day_of_week' => Carbon::parse($transaction['date'])->dayOfWeek,
+            ];
+        }, $filteredTransactions);
+
+        return response()->json([
+            'transactions' => array_values($formattedTransactions)
+        ]);
     }
 
     private function createInitialRentCheck(Property $property)

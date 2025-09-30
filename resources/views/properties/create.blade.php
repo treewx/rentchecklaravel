@@ -101,11 +101,16 @@
 
                     <div class="mb-3">
                         <label for="bank_statement_keyword" class="form-label">Bank Statement Keyword *</label>
-                        <input type="text" class="form-control @error('bank_statement_keyword') is-invalid @enderror"
-                               id="bank_statement_keyword" name="bank_statement_keyword" value="{{ old('bank_statement_keyword') }}" required
-                               placeholder="e.g., RENT PAYMENT, JOHN SMITH, etc.">
+                        <div class="input-group">
+                            <input type="text" class="form-control @error('bank_statement_keyword') is-invalid @enderror"
+                                   id="bank_statement_keyword" name="bank_statement_keyword" value="{{ old('bank_statement_keyword') }}" required
+                                   placeholder="e.g., RENT PAYMENT, JOHN SMITH, etc.">
+                            <button type="button" class="btn btn-outline-primary" id="findTransactionBtn">
+                                <i class="bi bi-search"></i> Find Transaction
+                            </button>
+                        </div>
                         <div class="form-text">
-                            Enter a keyword or phrase that appears in bank statements to identify rent payments for this property.
+                            Enter a keyword or phrase that appears in bank statements to identify rent payments for this property. Or click "Find Transaction" to select from recent transactions.
                         </div>
                         @error('bank_statement_keyword')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -121,4 +126,143 @@
         </div>
     </div>
 </div>
+
+<!-- Transaction Selection Modal -->
+<div class="modal fade" id="transactionModal" tabindex="-1" aria-labelledby="transactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="transactionModalLabel">Select Rent Payment Transaction</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="transactionLoadingMsg" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading transactions...</p>
+                </div>
+                <div id="transactionErrorMsg" class="alert alert-danger d-none"></div>
+                <div id="transactionList" class="d-none">
+                    <p class="text-muted">Select a transaction that represents a rent payment. The rent amount, day of week, and keyword will be auto-filled.</p>
+                    <div class="list-group" id="transactionItems">
+                        <!-- Transactions will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const findTransactionBtn = document.getElementById('findTransactionBtn');
+    const transactionModal = new bootstrap.Modal(document.getElementById('transactionModal'));
+    const rentAmountInput = document.getElementById('rent_amount');
+    const rentDueDayInput = document.getElementById('rent_due_day_of_week');
+    const keywordInput = document.getElementById('bank_statement_keyword');
+
+    findTransactionBtn.addEventListener('click', function() {
+        const rentAmount = rentAmountInput.value;
+
+        if (!rentAmount || rentAmount <= 0) {
+            alert('Please enter a valid rent amount first');
+            rentAmountInput.focus();
+            return;
+        }
+
+        // Show modal
+        transactionModal.show();
+
+        // Reset modal state
+        document.getElementById('transactionLoadingMsg').classList.remove('d-none');
+        document.getElementById('transactionErrorMsg').classList.add('d-none');
+        document.getElementById('transactionList').classList.add('d-none');
+        document.getElementById('transactionItems').innerHTML = '';
+
+        // Fetch transactions
+        fetch('{{ route('properties.transactions-for-keyword') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                rent_amount: rentAmount
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('transactionLoadingMsg').classList.add('d-none');
+
+            if (data.error) {
+                document.getElementById('transactionErrorMsg').textContent = data.error;
+                document.getElementById('transactionErrorMsg').classList.remove('d-none');
+                return;
+            }
+
+            if (!data.transactions || data.transactions.length === 0) {
+                document.getElementById('transactionErrorMsg').textContent = 'No transactions found near $' + rentAmount + ' in the last 60 days.';
+                document.getElementById('transactionErrorMsg').classList.remove('d-none');
+                return;
+            }
+
+            // Display transactions
+            const transactionItems = document.getElementById('transactionItems');
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+            data.transactions.forEach(transaction => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'list-group-item list-group-item-action';
+                item.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">$${transaction.amount.toFixed(2)}</h6>
+                        <small>${new Date(transaction.date).toLocaleDateString()}</small>
+                    </div>
+                    <p class="mb-1"><strong>${transaction.description}</strong></p>
+                    ${transaction.merchant ? `<small>Merchant: ${transaction.merchant}</small><br>` : ''}
+                    ${transaction.reference ? `<small>Reference: ${transaction.reference}</small><br>` : ''}
+                    <small class="text-muted">Day: ${dayNames[transaction.day_of_week]}</small>
+                `;
+
+                item.addEventListener('click', function() {
+                    // Auto-populate form fields
+                    rentAmountInput.value = transaction.amount.toFixed(2);
+                    rentDueDayInput.value = transaction.day_of_week;
+
+                    // Extract keyword from transaction
+                    let keyword = '';
+                    if (transaction.merchant && transaction.merchant.trim() !== '') {
+                        keyword = transaction.merchant;
+                    } else if (transaction.reference && transaction.reference.trim() !== '') {
+                        keyword = transaction.reference;
+                    } else if (transaction.description && transaction.description.trim() !== '') {
+                        // Take first meaningful word from description
+                        const words = transaction.description.split(/\s+/).filter(w => w.length > 3);
+                        keyword = words[0] || transaction.description;
+                    }
+
+                    keywordInput.value = keyword;
+
+                    // Close modal
+                    transactionModal.hide();
+                });
+
+                transactionItems.appendChild(item);
+            });
+
+            document.getElementById('transactionList').classList.remove('d-none');
+        })
+        .catch(error => {
+            document.getElementById('transactionLoadingMsg').classList.add('d-none');
+            document.getElementById('transactionErrorMsg').textContent = 'Error loading transactions: ' + error.message;
+            document.getElementById('transactionErrorMsg').classList.remove('d-none');
+        });
+    });
+});
+</script>
+@endpush
