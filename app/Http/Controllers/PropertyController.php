@@ -123,26 +123,46 @@ class PropertyController extends Controller
 
         try {
             $accounts = $akahuService->getAccounts($user);
+            \Log::info('Accounts fetched: ' . count($accounts));
         } catch (\Exception $e) {
             \Log::error('Failed to get accounts: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch accounts: ' . $e->getMessage()], 500);
         }
 
+        if (empty($accounts)) {
+            return response()->json([
+                'error' => 'No Akahu accounts found. Please reconnect your Akahu account.',
+                'debug' => [
+                    'total_fetched' => 0,
+                    'filtered_count' => 0,
+                    'accounts_count' => 0,
+                    'errors' => []
+                ]
+            ], 400);
+        }
+
         $allTransactions = [];
         $errors = [];
+        $accountsInfo = [];
 
         foreach ($accounts as $account) {
+            $accountName = $account['name'] ?? 'unknown';
+            $accountId = $account['_id'] ?? 'no-id';
+
             try {
                 $accountTransactions = $akahuService->getTransactions(
                     $user,
-                    $account['_id'],
+                    $accountId,
                     $startDate,
                     $endDate
                 );
                 $allTransactions = array_merge($allTransactions, $accountTransactions);
+                $accountsInfo[] = $accountName . ': ' . count($accountTransactions) . ' transactions';
+                \Log::info('Account ' . $accountName . ' (' . $accountId . '): ' . count($accountTransactions) . ' transactions');
             } catch (\Exception $e) {
-                $errors[] = 'Account ' . ($account['name'] ?? 'unknown') . ': ' . $e->getMessage();
-                \Log::error('Failed to get transactions for account ' . $account['_id'] . ': ' . $e->getMessage());
+                $errors[] = 'Account ' . $accountName . ': ' . $e->getMessage();
+                $accountsInfo[] = $accountName . ': ERROR - ' . $e->getMessage();
+                \Log::error('Failed to get transactions for account ' . $accountId . ': ' . $e->getMessage());
                 continue;
             }
         }
@@ -184,6 +204,8 @@ class PropertyController extends Controller
             'debug' => [
                 'total_fetched' => count($allTransactions),
                 'filtered_count' => count($filteredTransactions),
+                'accounts_count' => count($accounts),
+                'accounts_info' => $accountsInfo,
                 'errors' => $errors
             ]
         ]);

@@ -208,6 +208,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 let errorMsg = 'No transactions found near $' + rentAmount + ' in the last 60 days.';
                 if (data.debug) {
                     errorMsg += '\n\nDebug Info:\n';
+                    errorMsg += 'Accounts found: ' + data.debug.accounts_count + '\n';
+                    if (data.debug.accounts_info && data.debug.accounts_info.length > 0) {
+                        errorMsg += 'Account details:\n  ' + data.debug.accounts_info.join('\n  ') + '\n';
+                    }
                     errorMsg += 'Total transactions fetched: ' + data.debug.total_fetched + '\n';
                     errorMsg += 'Filtered transactions: ' + data.debug.filtered_count;
                     if (data.debug.errors && data.debug.errors.length > 0) {
