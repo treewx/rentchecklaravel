@@ -102,13 +102,28 @@ class PropertyController extends Controller
 
     public function getTransactionsForKeyword(Request $request)
     {
-        $request->validate([
-            'rent_amount' => ['required', 'numeric', 'min:0'],
+        \Log::info('Transaction fetch request received', [
+            'all_input' => $request->all(),
+            'json' => $request->json()->all(),
+            'content_type' => $request->header('Content-Type'),
         ]);
+
+        try {
+            $request->validate([
+                'rent_amount' => ['required', 'numeric', 'min:0'],
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed', ['errors' => $e->errors()]);
+            return response()->json([
+                'error' => 'Validation failed: ' . implode(', ', array_map(fn($v) => implode(', ', $v), $e->errors())),
+                'validation_errors' => $e->errors()
+            ], 422);
+        }
 
         $user = auth()->user();
 
         if (!$user->akahuCredentials) {
+            \Log::error('No Akahu credentials for user ' . $user->id);
             return response()->json(['error' => 'No Akahu credentials found'], 400);
         }
 

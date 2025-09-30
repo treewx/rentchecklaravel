@@ -188,13 +188,22 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
                 rent_amount: rentAmount
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || data.message || 'Request failed with status ' + response.status);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             document.getElementById('transactionLoadingMsg').classList.add('d-none');
 
