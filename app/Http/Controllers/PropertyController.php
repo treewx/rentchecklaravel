@@ -121,8 +121,15 @@ class PropertyController extends Controller
         $startDate = Carbon::now()->subDays(60);
         $endDate = Carbon::now();
 
-        $accounts = $akahuService->getAccounts($user);
+        try {
+            $accounts = $akahuService->getAccounts($user);
+        } catch (\Exception $e) {
+            \Log::error('Failed to get accounts: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch accounts: ' . $e->getMessage()], 500);
+        }
+
         $allTransactions = [];
+        $errors = [];
 
         foreach ($accounts as $account) {
             try {
@@ -134,17 +141,25 @@ class PropertyController extends Controller
                 );
                 $allTransactions = array_merge($allTransactions, $accountTransactions);
             } catch (\Exception $e) {
+                $errors[] = 'Account ' . ($account['name'] ?? 'unknown') . ': ' . $e->getMessage();
+                \Log::error('Failed to get transactions for account ' . $account['_id'] . ': ' . $e->getMessage());
                 continue;
             }
         }
 
-        // Filter transactions: negative amounts (outgoing) within tolerance of rent amount
+        \Log::info('Total transactions fetched: ' . count($allTransactions));
+        \Log::info('Rent amount: ' . $rentAmount . ', Tolerance: ' . $tolerance);
+
+        // Filter transactions: incoming/positive amounts (credits to your account) within tolerance of rent amount
         $filteredTransactions = array_filter($allTransactions, function($transaction) use ($rentAmount, $tolerance) {
             $amount = abs((float) $transaction['amount']);
-            return $transaction['amount'] < 0 &&
+            // For rent payments coming IN to landlord account, amount should be positive
+            return $transaction['amount'] > 0 &&
                    $amount >= ($rentAmount - $tolerance) &&
                    $amount <= ($rentAmount + $tolerance);
         });
+
+        \Log::info('Filtered transactions count: ' . count($filteredTransactions));
 
         // Sort by date descending
         usort($filteredTransactions, function($a, $b) {
@@ -165,7 +180,12 @@ class PropertyController extends Controller
         }, $filteredTransactions);
 
         return response()->json([
-            'transactions' => array_values($formattedTransactions)
+            'transactions' => array_values($formattedTransactions),
+            'debug' => [
+                'total_fetched' => count($allTransactions),
+                'filtered_count' => count($filteredTransactions),
+                'errors' => $errors
+            ]
         ]);
     }
 

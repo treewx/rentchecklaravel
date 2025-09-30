@@ -205,7 +205,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (!data.transactions || data.transactions.length === 0) {
-                document.getElementById('transactionErrorMsg').textContent = 'No transactions found near $' + rentAmount + ' in the last 60 days.';
+                let errorMsg = 'No transactions found near $' + rentAmount + ' in the last 60 days.';
+                if (data.debug) {
+                    errorMsg += '\n\nDebug Info:\n';
+                    errorMsg += 'Total transactions fetched: ' + data.debug.total_fetched + '\n';
+                    errorMsg += 'Filtered transactions: ' + data.debug.filtered_count;
+                    if (data.debug.errors && data.debug.errors.length > 0) {
+                        errorMsg += '\n\nErrors:\n' + data.debug.errors.join('\n');
+                    }
+                }
+                document.getElementById('transactionErrorMsg').innerHTML = errorMsg.replace(/\n/g, '<br>');
                 document.getElementById('transactionErrorMsg').classList.remove('d-none');
                 return;
             }
