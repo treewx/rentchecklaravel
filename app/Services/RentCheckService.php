@@ -306,8 +306,15 @@ class RentCheckService
             $user = $notificationData['user'];
             $results = $notificationData['results'];
 
+            Log::info('Checking notification for user: ' . $user->email, [
+                'email_enabled' => $user->email_notifications_enabled,
+                'email_on_late' => $user->email_on_rent_late,
+                'late_count' => count($results['late'])
+            ]);
+
             // Skip if user has disabled email notifications
             if (!$user->email_notifications_enabled) {
+                Log::info('Email notifications disabled for user: ' . $user->email);
                 continue;
             }
 
@@ -320,11 +327,25 @@ class RentCheckService
 
             // Only send notification if there are filtered results to report
             $totalResults = count($filteredResults['received']) + count($filteredResults['late']) + count($filteredResults['partial']);
+
+            Log::info('Notification total results: ' . $totalResults);
+
             if ($totalResults > 0) {
-                $user->notify(new RentStatusNotification(
-                    $filteredResults,
-                    now()->format('F j, Y')
-                ));
+                try {
+                    Log::info('Sending notification to: ' . $user->email);
+                    $user->notify(new RentStatusNotification(
+                        $filteredResults,
+                        now()->format('F j, Y')
+                    ));
+                    Log::info('Notification sent successfully to: ' . $user->email);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send notification to: ' . $user->email, [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+            } else {
+                Log::info('No results to notify for user: ' . $user->email);
             }
         }
     }
