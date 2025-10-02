@@ -36,14 +36,23 @@ Route::get('/cron/test-notification/{token}', function ($token) {
         abort(403, 'Invalid token');
     }
 
-    // Run the test notification command
-    Artisan::call('rent:test-notification');
+    try {
+        // Run the test notification command
+        $exitCode = Artisan::call('rent:test-notification');
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Test notification sent',
-        'output' => Artisan::output()
-    ]);
+        return response()->json([
+            'success' => $exitCode === 0,
+            'message' => $exitCode === 0 ? 'Test notification sent' : 'Test notification failed',
+            'output' => Artisan::output(),
+            'exit_code' => $exitCode
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
 })->name('cron.test-notification');
 
 // Debug endpoint to show server time
@@ -56,6 +65,27 @@ Route::get('/debug/server-time/{token}', function ($token) {
         'server_time_utc' => now()->toDateTimeString(),
         'server_time_nz' => now()->timezone('Pacific/Auckland')->toDateTimeString(),
         'timezone_config' => config('app.timezone'),
+    ]);
+});
+
+// Debug endpoint to check user email settings
+Route::get('/debug/email-settings/{token}', function ($token) {
+    if ($token !== config('app.cron_token')) {
+        abort(403, 'Invalid token');
+    }
+
+    $user = App\Models\User::first();
+
+    if (!$user) {
+        return response()->json(['error' => 'No users found']);
+    }
+
+    return response()->json([
+        'user_email' => $user->email,
+        'email_notifications_enabled' => $user->email_notifications_enabled,
+        'email_on_rent_received' => $user->email_on_rent_received,
+        'email_on_rent_late' => $user->email_on_rent_late,
+        'email_on_rent_partial' => $user->email_on_rent_partial,
     ]);
 });
 
