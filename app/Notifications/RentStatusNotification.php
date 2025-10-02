@@ -5,11 +5,10 @@ namespace App\Notifications;
 use App\Models\Property;
 use App\Models\RentCheck;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class RentStatusNotification extends Notification implements ShouldQueue
+class RentStatusNotification extends Notification
 {
     use Queueable;
 
