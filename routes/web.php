@@ -19,14 +19,28 @@ Route::get('/cron/rent-check/{token}', function ($token) {
         abort(403, 'Invalid token');
     }
 
-    // Run the rent check command
-    Artisan::call('rent:check');
+    try {
+        // Run the rent check command
+        $exitCode = Artisan::call('rent:check');
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Rent check completed',
-        'output' => Artisan::output()
-    ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Rent check completed',
+            'output' => Artisan::output(),
+            'exit_code' => $exitCode
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Rent check cron failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile() . ':' . $e->getLine()
+        ], 500);
+    }
 })->name('cron.rent-check');
 
 // Test notification endpoint
