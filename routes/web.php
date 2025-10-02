@@ -6,10 +6,28 @@ use App\Http\Controllers\AkahuController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Cron endpoint for external cron services
+Route::get('/cron/rent-check/{token}', function ($token) {
+    // Verify the secret token
+    if ($token !== config('app.cron_token')) {
+        abort(403, 'Invalid token');
+    }
+
+    // Run the rent check command
+    Artisan::call('rent:check');
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Rent check completed',
+        'output' => Artisan::output()
+    ]);
+})->name('cron.rent-check');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');

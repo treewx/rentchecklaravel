@@ -15,6 +15,7 @@ return [
     'faker_locale' => 'en_US',
     'key' => env('APP_KEY'),
     'cipher' => 'AES-256-CBC',
+    'cron_token' => env('CRON_TOKEN'),
 
     'providers' => [
         Illuminate\Auth\AuthServiceProvider::class,
