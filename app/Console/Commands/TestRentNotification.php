@@ -21,21 +21,32 @@ class TestRentNotification extends Command
             return self::FAILURE;
         }
 
+        // Get the user's first property
+        $property = $user->properties()->first();
+
+        if (!$property) {
+            $this->error('User has no properties');
+            return self::FAILURE;
+        }
+
+        // Get or create a rent check
+        $rentCheck = $property->rentChecks()->first();
+
+        if (!$rentCheck) {
+            $this->error('Property has no rent checks');
+            return self::FAILURE;
+        }
+
         $this->info('Sending test notification to: ' . $user->email);
 
-        // Send test notification with dummy data
+        // Send test notification with real data
         $user->notify(new RentStatusNotification(
             [
                 'received' => [],
                 'late' => [
                     [
-                        'property' => (object)[
-                            'name' => 'Test Property',
-                        ],
-                        'rent_check' => (object)[
-                            'expected_amount' => 500,
-                            'due_date' => now()->subDays(2),
-                        ]
+                        'property' => $property,
+                        'rent_check' => $rentCheck
                     ]
                 ],
                 'partial' => []
