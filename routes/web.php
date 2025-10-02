@@ -29,6 +29,23 @@ Route::get('/cron/rent-check/{token}', function ($token) {
     ]);
 })->name('cron.rent-check');
 
+// Test notification endpoint
+Route::get('/cron/test-notification/{token}', function ($token) {
+    // Verify the secret token
+    if ($token !== config('app.cron_token')) {
+        abort(403, 'Invalid token');
+    }
+
+    // Run the test notification command
+    Artisan::call('rent:test-notification');
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Test notification sent',
+        'output' => Artisan::output()
+    ]);
+})->name('cron.test-notification');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
