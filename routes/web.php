@@ -103,6 +103,36 @@ Route::get('/debug/email-settings/{token}', function ($token) {
     ]);
 });
 
+// Debug endpoint to check rent checks
+Route::get('/debug/rent-checks/{token}', function ($token) {
+    if ($token !== config('app.cron_token')) {
+        abort(403, 'Invalid token');
+    }
+
+    $rentChecks = App\Models\RentCheck::with('property')->get();
+    $now = now();
+
+    $data = $rentChecks->map(function($check) use ($now) {
+        return [
+            'id' => $check->id,
+            'property' => $check->property->name,
+            'due_date' => $check->due_date->toDateTimeString(),
+            'status' => $check->status,
+            'is_due' => $check->due_date <= $now,
+            'is_pending' => $check->status === 'pending',
+            'will_be_checked' => ($check->status === 'pending' && $check->due_date <= $now),
+        ];
+    });
+
+    return response()->json([
+        'current_time' => $now->toDateTimeString(),
+        'rent_checks' => $data,
+        'pending_and_due_count' => $rentChecks->filter(function($check) use ($now) {
+            return $check->status === 'pending' && $check->due_date <= $now;
+        })->count()
+    ]);
+});
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
