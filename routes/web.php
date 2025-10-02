@@ -133,6 +133,38 @@ Route::get('/debug/rent-checks/{token}', function ($token) {
     ]);
 });
 
+// Debug endpoint to reset a rent check to pending for testing
+Route::get('/debug/reset-rent-check/{id}/{token}', function ($id, $token) {
+    if ($token !== config('app.cron_token')) {
+        abort(403, 'Invalid token');
+    }
+
+    $rentCheck = App\Models\RentCheck::find($id);
+
+    if (!$rentCheck) {
+        return response()->json(['error' => 'Rent check not found']);
+    }
+
+    $rentCheck->status = 'pending';
+    $rentCheck->checked_at = null;
+    $rentCheck->received_amount = null;
+    $rentCheck->received_at = null;
+    $rentCheck->transaction_id = null;
+    $rentCheck->matching_transactions = null;
+    $rentCheck->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Rent check reset to pending',
+        'rent_check' => [
+            'id' => $rentCheck->id,
+            'property' => $rentCheck->property->name,
+            'due_date' => $rentCheck->due_date->toDateTimeString(),
+            'status' => $rentCheck->status,
+        ]
+    ]);
+});
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
