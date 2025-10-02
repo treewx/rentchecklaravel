@@ -125,17 +125,18 @@
                             <a href="{{ route('properties.show', $property) }}" class="btn btn-secondary">Cancel</a>
                         </div>
                         <div>
-                            <form method="POST" action="{{ route('properties.destroy', $property) }}" class="d-inline me-2"
-                                  onsubmit="return confirm('Are you sure you want to delete this property? This action cannot be undone.')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-outline-danger">
-                                    <i class="fas fa-trash"></i> Delete Property
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-outline-danger me-2" onclick="document.getElementById('delete-form').submit();">
+                                <i class="fas fa-trash"></i> Delete Property
+                            </button>
                             <button type="submit" class="btn btn-primary">Update Property</button>
                         </div>
                     </div>
+                </form>
+
+                <form id="delete-form" method="POST" action="{{ route('properties.destroy', $property) }}" class="d-none"
+                      onsubmit="return confirm('Are you sure you want to delete this property? This action cannot be undone.')">
+                    @csrf
+                    @method('DELETE')
                 </form>
             </div>
         </div>
