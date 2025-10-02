@@ -46,6 +46,19 @@ Route::get('/cron/test-notification/{token}', function ($token) {
     ]);
 })->name('cron.test-notification');
 
+// Debug endpoint to show server time
+Route::get('/debug/server-time/{token}', function ($token) {
+    if ($token !== config('app.cron_token')) {
+        abort(403, 'Invalid token');
+    }
+
+    return response()->json([
+        'server_time_utc' => now()->toDateTimeString(),
+        'server_time_nz' => now()->timezone('Pacific/Auckland')->toDateTimeString(),
+        'timezone_config' => config('app.timezone'),
+    ]);
+});
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
