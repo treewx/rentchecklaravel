@@ -4,8 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Mail;
-use Symfony\Component\Mailer\Bridge\Mailtrap\Transport\MailtrapApiTransport;
-use Symfony\Component\Mailer\Transport\Dsn;
+use App\Mail\MailtrapTransport;
+use App\Services\MailtrapService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,18 +22,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Mail::extend('mailtrap', function (array $config) {
-            $transport = new MailtrapApiTransport(
-                config('services.mailtrap.api_key')
-            );
-
-            // Set the endpoint to sandbox if using testing inbox
-            $host = config('services.mailtrap.host', 'send.api.mailtrap.io');
-            if ($host === 'sandbox.api.mailtrap.io') {
-                $transport->setHost('sandbox.smtp.mailtrap.io');
-            }
-
-            return $transport;
+        Mail::extend('mailtrap', function () {
+            return new MailtrapTransport(new MailtrapService());
         });
     }
 }
