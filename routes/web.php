@@ -188,10 +188,10 @@ Route::get('/test-email/{token}', function ($token) {
 
         // Use direct HTTP API call to Mailtrap Sandbox
         $apiKey = '310160914caa2eda7cb759816a809fa0';
-        $inboxId = '4079243';
+        $inboxId = '4079273';
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Api-Token' => $apiKey,
+            'Authorization' => 'Bearer ' . $apiKey,
             'Content-Type' => 'application/json',
         ])->post("https://sandbox.api.mailtrap.io/api/send/{$inboxId}", [
             'from' => [
