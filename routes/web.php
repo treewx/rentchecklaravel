@@ -186,15 +186,8 @@ Route::get('/test-email/{token}', function ($token) {
             return response()->json(['error' => 'No users found']);
         }
 
-        // Use Mailtrap Sending API
-        $mailtrapApiKey = env('MAILTRAP_API_KEY');
-
-        if (!$mailtrapApiKey) {
-            return response()->json([
-                'success' => false,
-                'error' => 'MAILTRAP_API_KEY not configured'
-            ], 500);
-        }
+        // Use Mailtrap Sending API - hardcoded for testing
+        $mailtrapApiKey = '6b00d2c0ba344416c8bd9c28baa9c383';
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Api-Token' => $mailtrapApiKey,
