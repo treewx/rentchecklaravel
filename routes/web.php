@@ -197,7 +197,7 @@ Route::get('/test-email/{token}', function ($token) {
         }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => 'Bearer ' . $mailtrapApiKey,
+            'Api-Token' => $mailtrapApiKey,
             'Content-Type' => 'application/json',
         ])->post('https://send.api.mailtrap.io/api/send', [
             'from' => [
