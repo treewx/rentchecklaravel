@@ -201,8 +201,8 @@ Route::get('/test-email/{token}', function ($token) {
             'Content-Type' => 'application/json',
         ])->post('https://send.api.mailtrap.io/api/send', [
             'from' => [
-                'email' => env('MAIL_FROM_ADDRESS', 'noreply@renttracker.com'),
-                'name' => env('MAIL_FROM_NAME', 'Rent Tracker'),
+                'email' => 'hello@demomailtrap.com',
+                'name' => 'Rent Tracker',
             ],
             'to' => [
                 ['email' => $user->email]
