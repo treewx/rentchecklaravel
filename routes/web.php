@@ -173,7 +173,7 @@ Route::get('/debug/reset-rent-check/{id}/{token}', function ($id, $token) {
     }
 });
 
-// Test email endpoint
+// Test email endpoint using Mailtrap API
 Route::get('/test-email/{token}', function ($token) {
     if ($token !== config('app.cron_token')) {
         abort(403, 'Invalid token');
@@ -186,17 +186,48 @@ Route::get('/test-email/{token}', function ($token) {
             return response()->json(['error' => 'No users found']);
         }
 
-        \Illuminate\Support\Facades\Mail::raw('This is a test email from your Railway-hosted Laravel app.', function($message) use ($user) {
-            $message->to($user->email)
-                    ->subject('Test Email - ' . now()->toDateTimeString());
-        });
+        // Use Mailtrap API instead of SMTP
+        $mailtrapApiKey = env('MAILTRAP_API_KEY');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Test email sent',
-            'to' => $user->email,
-            'time' => now()->toDateTimeString()
+        if (!$mailtrapApiKey) {
+            return response()->json([
+                'success' => false,
+                'error' => 'MAILTRAP_API_KEY not configured'
+            ], 500);
+        }
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => 'Bearer ' . $mailtrapApiKey,
+            'Content-Type' => 'application/json',
+        ])->post('https://send.api.mailtrap.io/api/send', [
+            'from' => [
+                'email' => env('MAIL_FROM_ADDRESS', 'noreply@renttracker.com'),
+                'name' => env('MAIL_FROM_NAME', 'Rent Tracker'),
+            ],
+            'to' => [
+                ['email' => $user->email]
+            ],
+            'subject' => 'Test Email - ' . now()->toDateTimeString(),
+            'text' => 'This is a test email from your Railway-hosted Laravel app.',
+            'category' => 'Test',
         ]);
+
+        if ($response->successful()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Test email sent via Mailtrap API',
+                'to' => $user->email,
+                'time' => now()->toDateTimeString(),
+                'response' => $response->json()
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'error' => 'Mailtrap API error',
+                'status' => $response->status(),
+                'body' => $response->body()
+            ], 500);
+        }
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
