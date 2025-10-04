@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.8",
         "nunomaduro/collision": "^7.0",
         "predis/predis": "^3.2",
+        "railsware/mailtrap-php": "*",
         "spatie/laravel-ignition": "^2.0"
     },
     "require-dev": {

@@ -37,4 +37,8 @@ return [
         'base_url' => env('AKAHU_API_BASE_URL', 'https://api.akahu.io/v1'),
     ],
 
+    'mailtrap' => [
+        'api_key' => env('MAILTRAP_API_KEY'),
+    ],
+
 ];

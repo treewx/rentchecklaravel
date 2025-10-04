@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Mail;
+use Symfony\Component\Mailer\Bridge\Mailtrap\Transport\MailtrapApiTransport;
+use Symfony\Component\Mailer\Transport\Dsn;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Mail::extend('mailtrap', function (array $config) {
+            return new MailtrapApiTransport(
+                config('services.mailtrap.api_key')
+            );
+        });
     }
 }
