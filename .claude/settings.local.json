@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(php artisan rent:check:*)"
+      "Bash(php artisan rent:check:*)",
+      "Bash(php artisan config:show:*)"
     ],
     "deny": [],
     "ask": []
