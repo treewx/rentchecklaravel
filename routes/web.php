@@ -173,6 +173,39 @@ Route::get('/debug/reset-rent-check/{id}/{token}', function ($id, $token) {
     }
 });
 
+// Test email endpoint
+Route::get('/test-email/{token}', function ($token) {
+    if ($token !== config('app.cron_token')) {
+        abort(403, 'Invalid token');
+    }
+
+    try {
+        $user = App\Models\User::first();
+
+        if (!$user) {
+            return response()->json(['error' => 'No users found']);
+        }
+
+        \Illuminate\Support\Facades\Mail::raw('This is a test email from your Railway-hosted Laravel app.', function($message) use ($user) {
+            $message->to($user->email)
+                    ->subject('Test Email - ' . now()->toDateTimeString());
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Test email sent',
+            'to' => $user->email,
+            'time' => now()->toDateTimeString()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
