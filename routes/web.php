@@ -186,6 +186,14 @@ Route::get('/test-email/{token}', function ($token) {
             return response()->json(['error' => 'No users found']);
         }
 
+        // Debug info
+        $debugInfo = [
+            'mailer' => config('mail.default'),
+            'mailtrap_api_key_set' => !empty(config('services.mailtrap.api_key')),
+            'from_address' => config('mail.from.address'),
+            'user_email' => $user->email,
+        ];
+
         // Send test email using Laravel Mail
         \Illuminate\Support\Facades\Mail::raw('This is a test email from your Railway-hosted Laravel app. Sent at ' . now()->toDateTimeString(), function($message) use ($user) {
             $message->to($user->email)
@@ -197,13 +205,19 @@ Route::get('/test-email/{token}', function ($token) {
             'message' => 'Test email sent',
             'to' => $user->email,
             'time' => now()->toDateTimeString(),
-            'mailer' => config('mail.default')
+            'debug' => $debugInfo
         ]);
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
             'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+            'config' => [
+                'mailer' => config('mail.default'),
+                'api_key_set' => !empty(config('services.mailtrap.api_key')),
+            ]
         ], 500);
     }
 });
