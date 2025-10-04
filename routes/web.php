@@ -173,7 +173,7 @@ Route::get('/debug/reset-rent-check/{id}/{token}', function ($id, $token) {
     }
 });
 
-// Test email endpoint using Mailtrap Sandbox API
+// Test email endpoint using Mailtrap Sending API
 Route::get('/test-email/{token}', function ($token) {
     if ($token !== config('app.cron_token')) {
         abort(403, 'Invalid token');
@@ -186,9 +186,8 @@ Route::get('/test-email/{token}', function ($token) {
             return response()->json(['error' => 'No users found']);
         }
 
-        // Use Mailtrap Sandbox API (for testing inboxes)
+        // Use Mailtrap Sending API
         $mailtrapApiKey = env('MAILTRAP_API_KEY');
-        $mailtrapInboxId = env('MAILTRAP_INBOX_ID', '3269599'); // Default inbox ID
 
         if (!$mailtrapApiKey) {
             return response()->json([
@@ -198,11 +197,11 @@ Route::get('/test-email/{token}', function ($token) {
         }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Api-Token' => $mailtrapApiKey,
+            'Authorization' => 'Bearer ' . $mailtrapApiKey,
             'Content-Type' => 'application/json',
-        ])->post("https://mailtrap.io/api/send/{$mailtrapInboxId}", [
+        ])->post('https://send.api.mailtrap.io/api/send', [
             'from' => [
-                'email' => 'test@example.com',
+                'email' => 'mailtrap@demomailtrap.com',
                 'name' => 'Rent Tracker',
             ],
             'to' => [
@@ -210,12 +209,13 @@ Route::get('/test-email/{token}', function ($token) {
             ],
             'subject' => 'Test Email - ' . now()->toDateTimeString(),
             'text' => 'This is a test email from your Railway-hosted Laravel app.',
+            'category' => 'Test',
         ]);
 
         if ($response->successful()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Test email sent via Mailtrap Sandbox API',
+                'message' => 'Test email sent via Mailtrap Sending API',
                 'to' => $user->email,
                 'time' => now()->toDateTimeString(),
                 'response' => $response->json()
