@@ -39,6 +39,8 @@ return [
 
     'mailtrap' => [
         'api_key' => env('MAILTRAP_API_KEY'),
+        'host' => env('MAILTRAP_HOST', 'send.api.mailtrap.io'),
+        'inbox_id' => env('MAILTRAP_INBOX_ID'),
     ],
 
 ];

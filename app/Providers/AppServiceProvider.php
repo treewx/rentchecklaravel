@@ -23,9 +23,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Mail::extend('mailtrap', function (array $config) {
-            return new MailtrapApiTransport(
+            $transport = new MailtrapApiTransport(
                 config('services.mailtrap.api_key')
             );
+
+            // Set the endpoint to sandbox if using testing inbox
+            $host = config('services.mailtrap.host', 'send.api.mailtrap.io');
+            if ($host === 'sandbox.api.mailtrap.io') {
+                $transport->setHost('sandbox.smtp.mailtrap.io');
+            }
+
+            return $transport;
         });
     }
 }
