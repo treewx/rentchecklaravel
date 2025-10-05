@@ -31,7 +31,7 @@ class RentStatusNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return [\App\Channels\MailtrapChannel::class];
     }
 
     /**
