@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AkahuController;
 use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\PropertyTransactionController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -255,6 +256,10 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/properties/transactions-for-keyword', [PropertyController::class, 'getTransactionsForKeyword'])->name('properties.transactions-for-keyword');
     Route::resource('properties', PropertyController::class);
+
+    // Property transaction routes
+    Route::post('/properties/{property}/transactions', [PropertyTransactionController::class, 'store'])->name('properties.transactions.store');
+    Route::get('/properties/{property}/transactions', [PropertyTransactionController::class, 'index'])->name('properties.transactions.index');
 
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Property;
+use App\Models\PropertyTransaction;
 use App\Models\RentCheck;
 use App\Models\User;
 use App\Notifications\RentStatusNotification;
@@ -29,8 +30,15 @@ class RentCheckService
 
         $userNotifications = [];
 
+        // Check both pending checks AND late checks within 7-day grace period
         $pendingChecks = RentCheck::with(['property.user'])
-            ->where('status', 'pending')
+            ->where(function($query) {
+                $query->where('status', 'pending')
+                      ->orWhere(function($q) {
+                          $q->where('status', 'late')
+                            ->where('due_date', '>=', now()->subDays(7));
+                      });
+            })
             ->where('due_date', '<=', now())
             ->get();
 
@@ -121,6 +129,8 @@ class RentCheckService
         $rentCheck->checked_at = now();
         $rentCheck->matching_transactions = $matchingTransactions;
 
+        $previousStatus = $rentCheck->status;
+
         if (!empty($matchingTransactions)) {
             $totalReceived = collect($matchingTransactions)->sum('amount');
 
@@ -134,6 +144,27 @@ class RentCheckService
             } else {
                 $rentCheck->status = 'partial';
                 $result = 'partial';
+            }
+
+            // Create credit transaction for payment received (if not already created)
+            $existingTransaction = PropertyTransaction::where('rent_check_id', $rentCheck->id)
+                ->where('type', 'rent_payment')
+                ->first();
+
+            if (!$existingTransaction) {
+                PropertyTransaction::create([
+                    'property_id' => $property->id,
+                    'rent_check_id' => $rentCheck->id,
+                    'transaction_date' => $rentCheck->received_at,
+                    'amount' => abs($totalReceived), // Positive = credit
+                    'type' => 'rent_payment',
+                    'description' => 'Rent payment received for ' . $rentCheck->due_date->format('M j, Y'),
+                    'source' => 'akahu',
+                    'akahu_transaction_id' => $matchingTransactions[0]['_id'] ?? null,
+                ]);
+
+                // Update property balance
+                $property->updateBalance();
             }
         } else {
             if ($rentCheck->due_date->isPast()) {
@@ -234,12 +265,26 @@ class RentCheckService
         foreach ($properties as $property) {
             $nextDueDate = $this->calculateNextRentDueDate($property);
 
-            RentCheck::create([
+            $rentCheck = RentCheck::create([
                 'property_id' => $property->id,
                 'due_date' => $nextDueDate,
                 'expected_amount' => $property->rent_amount,
                 'status' => 'pending',
             ]);
+
+            // Create debit transaction for rent due
+            PropertyTransaction::create([
+                'property_id' => $property->id,
+                'rent_check_id' => $rentCheck->id,
+                'transaction_date' => $nextDueDate,
+                'amount' => -$property->rent_amount, // Negative = debit (tenant owes)
+                'type' => 'rent_due',
+                'description' => 'Rent due for ' . $nextDueDate->format('M j, Y'),
+                'source' => 'system',
+            ]);
+
+            // Update property balance
+            $property->updateBalance();
         }
     }
 

@@ -13,6 +13,7 @@ class Property extends Model
         'name',
         'address',
         'rent_amount',
+        'current_balance',
         'rent_due_day_of_week',
         'rent_frequency',
         'tenant_name',
@@ -22,6 +23,7 @@ class Property extends Model
 
     protected $casts = [
         'rent_amount' => 'decimal:2',
+        'current_balance' => 'decimal:2',
         'is_active' => 'boolean',
         'rent_due_day_of_week' => 'integer',
     ];
@@ -34,6 +36,36 @@ class Property extends Model
     public function rentChecks(): HasMany
     {
         return $this->hasMany(RentCheck::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(PropertyTransaction::class);
+    }
+
+    /**
+     * Calculate and update the current balance based on all transactions
+     */
+    public function updateBalance(): void
+    {
+        $balance = $this->transactions()->sum('amount');
+        $this->update(['current_balance' => $balance]);
+    }
+
+    /**
+     * Get the balance formatted for display
+     */
+    public function getFormattedBalanceAttribute(): string
+    {
+        return number_format(abs($this->current_balance), 2);
+    }
+
+    /**
+     * Check if property has outstanding balance (tenant owes money)
+     */
+    public function hasOutstandingBalance(): bool
+    {
+        return $this->current_balance < 0;
     }
 
     public function getNextRentDueDateAttribute()

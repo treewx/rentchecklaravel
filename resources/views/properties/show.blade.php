@@ -89,8 +89,19 @@
 
             <div class="col-md-8">
                 <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Recent Rent Checks</h5>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0 d-inline">Recent Rent Checks</h5>
+                            <span class="ms-3">
+                                Balance:
+                                <strong class="{{ $property->hasOutstandingBalance() ? 'text-danger' : 'text-success' }}">
+                                    {{ $property->hasOutstandingBalance() ? '-' : '' }}${{ $property->formatted_balance }}
+                                </strong>
+                            </span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+                            <i class="fas fa-plus"></i> Add Payment
+                        </button>
                     </div>
                     <div class="card-body">
                         @if($rentChecks->count() > 0)
@@ -176,4 +187,147 @@
         </div>
     </div>
 </div>
+
+<!-- Add Payment Modal -->
+<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addPaymentModalLabel">Add Manual Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addPaymentForm">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none" id="paymentErrorAlert"></div>
+                    <div class="alert alert-success d-none" id="paymentSuccessAlert"></div>
+
+                    <div class="mb-3">
+                        <label for="payment_amount" class="form-label">Amount <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="payment_amount" name="amount" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="invalid-feedback" id="amount_error"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="payment_date" class="form-label">Payment Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="payment_date" name="transaction_date" value="{{ date('Y-m-d') }}" required>
+                        <div class="invalid-feedback" id="transaction_date_error"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="rent_check_id" class="form-label">Apply to Rent Check (Optional)</label>
+                        <select class="form-select" id="rent_check_id" name="rent_check_id">
+                            <option value="">-- Select a rent check --</option>
+                            @foreach($rentChecks as $rentCheck)
+                                @if($rentCheck->status !== 'received')
+                                    <option value="{{ $rentCheck->id }}">
+                                        {{ $rentCheck->due_date->format('M j, Y') }} -
+                                        ${{ number_format($rentCheck->expected_amount, 2) }}
+                                        ({{ ucfirst($rentCheck->status) }})
+                                    </option>
+                                @endif
+                            @endforeach
+                        </select>
+                        <div class="invalid-feedback" id="rent_check_id_error"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="payment_description" class="form-label">Description / Note (Optional)</label>
+                        <textarea class="form-control" id="payment_description" name="description" rows="3" maxlength="500"></textarea>
+                        <div class="invalid-feedback" id="description_error"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitPaymentBtn">
+                        <i class="fas fa-save"></i> Add Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.getElementById('addPaymentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const submitBtn = document.getElementById('submitPaymentBtn');
+    const errorAlert = document.getElementById('paymentErrorAlert');
+    const successAlert = document.getElementById('paymentSuccessAlert');
+
+    // Clear previous errors
+    errorAlert.classList.add('d-none');
+    successAlert.classList.add('d-none');
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+    // Disable submit button
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+
+    try {
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        const response = await fetch('{{ route("properties.transactions.store", $property) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('[name="_token"]').value,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            successAlert.textContent = result.message;
+            successAlert.classList.remove('d-none');
+
+            // Reset form
+            form.reset();
+            document.getElementById('payment_date').value = '{{ date("Y-m-d") }}';
+
+            // Reload page after 1.5 seconds to show updated balance and rent checks
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            // Handle validation errors
+            if (result.errors) {
+                Object.keys(result.errors).forEach(field => {
+                    const input = document.getElementById(field) || document.querySelector(`[name="${field}"]`);
+                    const errorDiv = document.getElementById(`${field}_error`);
+
+                    if (input) {
+                        input.classList.add('is-invalid');
+                    }
+                    if (errorDiv) {
+                        errorDiv.textContent = result.errors[field][0];
+                    }
+                });
+            }
+
+            errorAlert.textContent = result.message || 'Failed to add payment. Please check the form.';
+            errorAlert.classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        errorAlert.textContent = 'An error occurred while adding the payment.';
+        errorAlert.classList.remove('d-none');
+    } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Add Payment';
+    }
+});
+</script>
+@endpush
 @endsection
