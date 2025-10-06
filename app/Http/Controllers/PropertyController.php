@@ -58,7 +58,13 @@ class PropertyController extends Controller
             ->orderBy('due_date', 'desc')
             ->paginate(10);
 
-        return view('properties.show', compact('property', 'rentChecks'));
+        $transactions = $property->transactions()
+            ->with('rentCheck')
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->paginate(20, ['*'], 'transactions_page');
+
+        return view('properties.show', compact('property', 'rentChecks', 'transactions'));
     }
 
     public function edit(Property $property)

@@ -147,8 +147,9 @@ class RentCheckService
             }
 
             // Create credit transaction for payment received (if not already created)
+            // Check for ANY payment transactions (automatic or manual) to avoid duplicates
             $existingTransaction = PropertyTransaction::where('rent_check_id', $rentCheck->id)
-                ->where('type', 'rent_payment')
+                ->whereIn('type', ['rent_payment', 'manual_payment'])
                 ->first();
 
             if (!$existingTransaction) {
@@ -165,6 +166,10 @@ class RentCheckService
 
                 // Update property balance
                 $property->updateBalance();
+            } else {
+                // Payment transaction already exists (manual or automatic)
+                // Just update the rent check status without creating duplicate transaction
+                Log::info("Skipping duplicate payment transaction for rent check #{$rentCheck->id} - existing transaction found");
             }
         } else {
             if ($rentCheck->due_date->isPast()) {

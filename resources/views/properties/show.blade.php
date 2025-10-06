@@ -185,6 +185,92 @@
                 </div>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Transaction History</h5>
+                    </div>
+                    <div class="card-body">
+                        @if($transactions->count() > 0)
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                            <th>Debit</th>
+                                            <th>Credit</th>
+                                            <th>Source</th>
+                                            <th>Rent Check</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($transactions as $transaction)
+                                            <tr>
+                                                <td>
+                                                    {{ $transaction->transaction_date->format('M j, Y') }}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-{{ $transaction->type === 'rent_due' ? 'danger' : 'success' }}">
+                                                        {{ str_replace('_', ' ', ucfirst($transaction->type)) }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <small>{{ $transaction->description }}</small>
+                                                </td>
+                                                <td class="text-danger">
+                                                    @if($transaction->amount < 0)
+                                                        ${{ number_format(abs($transaction->amount), 2) }}
+                                                    @endif
+                                                </td>
+                                                <td class="text-success">
+                                                    @if($transaction->amount > 0)
+                                                        ${{ number_format($transaction->amount, 2) }}
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">{{ ucfirst($transaction->source) }}</small>
+                                                </td>
+                                                <td>
+                                                    @if($transaction->rentCheck)
+                                                        <small class="text-muted">
+                                                            {{ $transaction->rentCheck->due_date->format('M j, Y') }}
+                                                        </small>
+                                                    @else
+                                                        <small class="text-muted">-</small>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="fw-bold">
+                                            <td colspan="3" class="text-end">Current Balance:</td>
+                                            <td></td>
+                                            <td class="{{ $property->hasOutstandingBalance() ? 'text-danger' : 'text-success' }}">
+                                                {{ $property->hasOutstandingBalance() ? '-' : '' }}${{ $property->formatted_balance }}
+                                            </td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            {{ $transactions->links() }}
+                        @else
+                            <div class="text-center py-4">
+                                <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                                <h5>No Transactions Yet</h5>
+                                <p class="text-muted">Transaction history will appear here.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
