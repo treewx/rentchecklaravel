@@ -212,7 +212,7 @@ class PropertyController extends Controller
                 'description' => $transaction['description'] ?? '',
                 'merchant' => $transaction['merchant']['name'] ?? '',
                 'reference' => $transaction['meta']['reference'] ?? '',
-                'day_of_week' => Carbon::parse($transaction['date'])->dayOfWeek,
+                'day_of_week' => Carbon::parse($transaction['date'])->timezone('Pacific/Auckland')->dayOfWeek,
             ];
         }, $filteredTransactions);
 
