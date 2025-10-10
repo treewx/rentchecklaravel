@@ -32,18 +32,6 @@ class PropertyTransactionController extends Controller
                     'message' => 'The selected rent check does not belong to this property.',
                 ], 422);
             }
-
-            // Check if this rent check already has payment transactions
-            $existingPayments = PropertyTransaction::where('rent_check_id', $validated['rent_check_id'])
-                ->whereIn('type', ['rent_payment', 'manual_payment'])
-                ->exists();
-
-            if ($existingPayments) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This rent check already has payment transactions. Adding another payment would create a duplicate. Please check the transaction history.',
-                ], 422);
-            }
         }
 
         // Create the transaction
