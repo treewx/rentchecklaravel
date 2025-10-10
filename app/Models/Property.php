@@ -17,6 +17,8 @@ class Property extends Model
         'rent_due_day_of_week',
         'rent_frequency',
         'tenant_name',
+        'tenant_email',
+        'notify_on_missed_payment',
         'bank_statement_keyword',
         'is_active',
     ];
@@ -25,6 +27,7 @@ class Property extends Model
         'rent_amount' => 'decimal:2',
         'current_balance' => 'decimal:2',
         'is_active' => 'boolean',
+        'notify_on_missed_payment' => 'boolean',
         'rent_due_day_of_week' => 'integer',
     ];
 

@@ -34,11 +34,12 @@ class PropertyController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'address' => ['required', 'string'],
             'rent_amount' => ['required', 'numeric', 'min:0'],
             'rent_due_day_of_week' => ['required', 'integer', 'min:0', 'max:6'],
             'rent_frequency' => ['required', 'string', 'in:weekly,fortnightly,monthly'],
             'tenant_name' => ['nullable', 'string', 'max:255'],
+            'tenant_email' => ['nullable', 'email', 'max:255'],
+            'notify_on_missed_payment' => ['boolean'],
             'bank_statement_keyword' => ['required', 'string', 'max:255'],
         ]);
 
@@ -81,11 +82,12 @@ class PropertyController extends Controller
 
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'address' => ['required', 'string'],
             'rent_amount' => ['required', 'numeric', 'min:0'],
             'rent_due_day_of_week' => ['required', 'integer', 'min:0', 'max:6'],
             'rent_frequency' => ['required', 'string', 'in:weekly,fortnightly,monthly'],
             'tenant_name' => ['nullable', 'string', 'max:255'],
+            'tenant_email' => ['nullable', 'email', 'max:255'],
+            'notify_on_missed_payment' => ['boolean'],
             'bank_statement_keyword' => ['required', 'string', 'max:255'],
             'is_active' => ['boolean'],
         ]);

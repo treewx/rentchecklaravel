@@ -37,13 +37,31 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="address" class="form-label">Address *</label>
-                        <textarea class="form-control @error('address') is-invalid @enderror"
-                                  id="address" name="address" rows="3" required>{{ old('address', $property->address) }}</textarea>
-                        @error('address')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="tenant_email" class="form-label">Tenant Email</label>
+                                <input type="email" class="form-control @error('tenant_email') is-invalid @enderror"
+                                       id="tenant_email" name="tenant_email" value="{{ old('tenant_email', $property->tenant_email) }}"
+                                       placeholder="e.g., tenant@example.com">
+                                @error('tenant_email')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="notify_on_missed_payment" class="form-label">Missed Payment Notification</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="notify_on_missed_payment"
+                                           name="notify_on_missed_payment" value="1"
+                                           {{ old('notify_on_missed_payment', $property->notify_on_missed_payment) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="notify_on_missed_payment">
+                                        Notify tenant
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row">
