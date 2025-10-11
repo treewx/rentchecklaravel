@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\Property;
 use App\Models\PropertyTransaction;
 use App\Models\RentCheck;
+use App\Models\TenantNotifiable;
 use App\Models\User;
 use App\Notifications\RentStatusNotification;
+use App\Notifications\TenantMissedPaymentNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -87,8 +89,11 @@ class RentCheckService
 
         $this->createNextRentChecks();
 
-        // Send email notifications to users
+        // Send email notifications to users (property owners)
         $this->sendNotifications($userNotifications);
+
+        // Send email notifications to tenants for missed payments
+        $this->sendTenantNotifications($userNotifications);
 
         return $results;
     }
@@ -396,6 +401,56 @@ class RentCheckService
                 }
             } else {
                 Log::info('No results to notify for user: ' . $user->email);
+            }
+        }
+    }
+
+    private function sendTenantNotifications(array $userNotifications): void
+    {
+        foreach ($userNotifications as $userId => $notificationData) {
+            $results = $notificationData['results'];
+
+            // Only send notifications to tenants for late and partial payments
+            $missedPayments = array_merge($results['late'], $results['partial']);
+
+            foreach ($missedPayments as $paymentData) {
+                $property = $paymentData['property'];
+                $rentCheck = $paymentData['rent_check'];
+
+                // Check if the property has tenant email and notification is enabled
+                if (empty($property->tenant_email) || !$property->notify_on_missed_payment) {
+                    Log::info('Skipping tenant notification for property: ' . $property->name, [
+                        'has_email' => !empty($property->tenant_email),
+                        'notify_enabled' => $property->notify_on_missed_payment
+                    ]);
+                    continue;
+                }
+
+                try {
+                    Log::info('Sending missed payment notification to tenant: ' . $property->tenant_email, [
+                        'property' => $property->name,
+                        'rent_check_id' => $rentCheck->id,
+                        'status' => $rentCheck->status
+                    ]);
+
+                    // Create a notifiable object for the tenant
+                    $tenant = new TenantNotifiable(
+                        $property->tenant_email,
+                        $property->tenant_name ?? 'Tenant'
+                    );
+
+                    // Send the notification
+                    $tenant->notify(new TenantMissedPaymentNotification($property, $rentCheck));
+
+                    Log::info('Tenant notification sent successfully to: ' . $property->tenant_email);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send tenant notification', [
+                        'property' => $property->name,
+                        'tenant_email' => $property->tenant_email,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
             }
         }
     }
