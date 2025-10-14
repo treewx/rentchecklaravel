@@ -200,8 +200,8 @@ class RentCheckService
         foreach ($transactions as $transaction) {
             $amount = (float) $transaction['amount'];
 
-            // Skip positive amounts (incoming to the account owner, not rent payments)
-            if ($amount > 0) {
+            // Skip negative amounts (outgoing payments) - we want positive amounts (incoming rent payments)
+            if ($amount < 0) {
                 continue;
             }
 
@@ -225,7 +225,7 @@ class RentCheckService
             foreach ($transactions as $transaction) {
                 $amount = (float) $transaction['amount'];
 
-                if ($amount > 0) {
+                if ($amount < 0) {
                     continue;
                 }
 
@@ -249,7 +249,7 @@ class RentCheckService
             foreach ($transactions as $transaction) {
                 $amount = (float) $transaction['amount'];
 
-                if ($amount > 0) {
+                if ($amount < 0) {
                     continue;
                 }
 
