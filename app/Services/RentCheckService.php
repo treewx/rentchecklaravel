@@ -300,44 +300,8 @@ class RentCheckService
 
     private function calculateNextRentDueDate(Property $property): Carbon
     {
-        $today = now();
-        $frequency = $property->rent_frequency;
-        $dayOfWeek = $property->rent_due_day_of_week;
-
-        switch ($frequency) {
-            case 'weekly':
-                // Find next occurrence of the specified day of week
-                $nextDueDate = $today->copy()->next($this->getDayName($dayOfWeek))->setTime(0, 0, 0);
-                break;
-
-            case 'fortnightly':
-                // Find next occurrence of the specified day of week, then add a week if needed
-                $nextDueDate = $today->copy()->next($this->getDayName($dayOfWeek))->setTime(0, 0, 0);
-                // For fortnightly, we need to check if there should be a 2-week gap
-                // This is a simplified approach - you might want to store last payment date for more accuracy
-                if ($nextDueDate->diffInDays($today) < 7) {
-                    $nextDueDate->addWeeks(1);
-                }
-                break;
-
-            case 'monthly':
-            default:
-                // Find next occurrence of the specified day of week in the next month
-                $nextDueDate = $today->copy()->addMonth()->startOfMonth();
-                while ($nextDueDate->dayOfWeek !== $dayOfWeek) {
-                    $nextDueDate->addDay();
-                }
-                // If we've passed this week's occurrence, move to next month
-                if ($nextDueDate <= $today) {
-                    $nextDueDate->addMonth();
-                    while ($nextDueDate->dayOfWeek !== $dayOfWeek) {
-                        $nextDueDate->addDay();
-                    }
-                }
-                break;
-        }
-
-        return $nextDueDate;
+        // Use the property's next_rent_due_date attribute which handles rent_start_date logic
+        return $property->next_rent_due_date;
     }
 
     private function getDayName(int $dayOfWeek): string

@@ -116,6 +116,26 @@
                         </div>
                     </div>
 
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="rent_start_date" class="form-label">Rent Start Date</label>
+                                <input type="date" class="form-control @error('rent_start_date') is-invalid @enderror"
+                                       id="rent_start_date" name="rent_start_date" value="{{ old('rent_start_date') }}"
+                                       min="{{ date('Y-m-d') }}">
+                                <div class="form-text">
+                                    Optional: When should rent payments begin? Leave blank to start from next occurrence of the selected day.
+                                </div>
+                                @error('rent_start_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div id="rent_start_date_warning" class="text-warning mt-1" style="display: none;">
+                                    <small>Warning: The selected date does not match the selected day of week.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="bank_statement_keyword" class="form-label">Bank Statement Keyword *</label>
                         <div class="input-group">
@@ -181,6 +201,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const rentAmountInput = document.getElementById('rent_amount');
     const rentDueDayInput = document.getElementById('rent_due_day_of_week');
     const keywordInput = document.getElementById('bank_statement_keyword');
+    const rentStartDateInput = document.getElementById('rent_start_date');
+    const rentStartDateWarning = document.getElementById('rent_start_date_warning');
+
+    // Validate rent start date matches selected day of week
+    function validateRentStartDate() {
+        if (!rentStartDateInput.value || !rentDueDayInput.value) {
+            rentStartDateWarning.style.display = 'none';
+            return;
+        }
+
+        const selectedDate = new Date(rentStartDateInput.value);
+        const selectedDayOfWeek = parseInt(rentDueDayInput.value);
+        const dateDayOfWeek = selectedDate.getDay(); // 0 = Sunday, 6 = Saturday
+
+        if (dateDayOfWeek !== selectedDayOfWeek) {
+            rentStartDateWarning.style.display = 'block';
+        } else {
+            rentStartDateWarning.style.display = 'none';
+        }
+    }
+
+    if (rentStartDateInput) {
+        rentStartDateInput.addEventListener('change', validateRentStartDate);
+    }
+    if (rentDueDayInput) {
+        rentDueDayInput.addEventListener('change', validateRentStartDate);
+    }
 
     findTransactionBtn.addEventListener('click', function() {
         const rentAmount = rentAmountInput.value;
