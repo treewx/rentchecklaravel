@@ -20,6 +20,7 @@ class Property extends Model
         'tenant_name',
         'tenant_email',
         'notify_on_missed_payment',
+        'grace_period_days',
         'bank_statement_keyword',
         'is_active',
     ];
@@ -29,6 +30,7 @@ class Property extends Model
         'current_balance' => 'decimal:2',
         'is_active' => 'boolean',
         'notify_on_missed_payment' => 'boolean',
+        'grace_period_days' => 'integer',
         'rent_due_day_of_week' => 'integer',
         'rent_start_date' => 'date',
     ];

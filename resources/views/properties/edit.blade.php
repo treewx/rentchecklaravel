@@ -38,7 +38,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-8">
+                        <div class="col-md-5">
                             <div class="mb-3">
                                 <label for="tenant_email" class="form-label">Tenant Email</label>
                                 <input type="email" class="form-control @error('tenant_email') is-invalid @enderror"
@@ -60,6 +60,21 @@
                                         Notify tenant
                                     </label>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="grace_period_days" class="form-label">Email Delay</label>
+                                <select class="form-control @error('grace_period_days') is-invalid @enderror"
+                                        id="grace_period_days" name="grace_period_days" required>
+                                    <option value="0" {{ old('grace_period_days', $property->grace_period_days) == '0' ? 'selected' : '' }}>No delay</option>
+                                    <option value="1" {{ old('grace_period_days', $property->grace_period_days) == '1' ? 'selected' : '' }}>1 day</option>
+                                    <option value="2" {{ old('grace_period_days', $property->grace_period_days) == '2' ? 'selected' : '' }}>2 days</option>
+                                    <option value="3" {{ old('grace_period_days', $property->grace_period_days) == '3' ? 'selected' : '' }}>3 days</option>
+                                </select>
+                                @error('grace_period_days')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>

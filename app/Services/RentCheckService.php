@@ -390,6 +390,17 @@ class RentCheckService
                     continue;
                 }
 
+                $gracePeriodDays = $property->grace_period_days ?? 0;
+                $notifyDate = $rentCheck->due_date->copy()->addDays($gracePeriodDays);
+
+                if (now()->isBefore($notifyDate)) {
+                    Log::info('Skipping tenant notification due to grace period for property: ' . $property->name, [
+                        'grace_period' => $gracePeriodDays,
+                        'notify_date' => $notifyDate->toDateString()
+                    ]);
+                    continue;
+                }
+
                 try {
                     Log::info('Sending missed payment notification to tenant: ' . $property->tenant_email, [
                         'property' => $property->name,

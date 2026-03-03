@@ -41,6 +41,7 @@ class PropertyController extends Controller
             'tenant_name' => ['nullable', 'string', 'max:255'],
             'tenant_email' => ['nullable', 'email', 'max:255'],
             'notify_on_missed_payment' => ['boolean'],
+            'grace_period_days' => ['required', 'integer', 'min:0', 'max:3'],
             'bank_statement_keyword' => ['required', 'string', 'max:255'],
         ]);
 
@@ -90,6 +91,7 @@ class PropertyController extends Controller
             'tenant_name' => ['nullable', 'string', 'max:255'],
             'tenant_email' => ['nullable', 'email', 'max:255'],
             'notify_on_missed_payment' => ['boolean'],
+            'grace_period_days' => ['required', 'integer', 'min:0', 'max:3'],
             'bank_statement_keyword' => ['required', 'string', 'max:255'],
             'is_active' => ['boolean'],
         ]);
