@@ -19,6 +19,20 @@ yarn-error.log
 # Database
 database/database.sqlite
 
+# Runtime files
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/cache/*
+bootstrap/cache/*.php
+!storage/framework/sessions/.gitignore
+!storage/framework/views/.gitignore
+!storage/framework/cache/.gitignore
+
+# Local tooling
+composer.phar
+.claude/settings.local.json
+cookies*.txt
+
 # Logs
 storage/logs/*.log
 
