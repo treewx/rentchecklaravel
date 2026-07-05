@@ -84,11 +84,7 @@ class AkahuService
 
     public function getAccounts(User $user): array
     {
-        $credentials = $user->akahuCredentials;
-
-        if (!$credentials || $credentials->isExpired()) {
-            throw new \Exception('No valid Akahu credentials found');
-        }
+        $credentials = $this->getUsableCredentials($user);
 
         $response = $this->makeAuthenticatedRequest('GET', '/accounts', $credentials);
 
@@ -97,11 +93,7 @@ class AkahuService
 
     public function getTransactions(User $user, string $accountId, Carbon $start = null, Carbon $end = null): array
     {
-        $credentials = $user->akahuCredentials;
-
-        if (!$credentials || $credentials->isExpired()) {
-            throw new \Exception('No valid Akahu credentials found');
-        }
+        $credentials = $this->getUsableCredentials($user);
 
         $params = [];
         if ($start) {
@@ -121,24 +113,26 @@ class AkahuService
         return $response->json()['items'] ?? [];
     }
 
+    private function getUsableCredentials(User $user): AkahuCredential
+    {
+        $credentials = $user->akahuCredentials;
+
+        if (!$credentials) {
+            throw new \Exception('No Akahu credentials found');
+        }
+
+        // Expired credentials are only unusable if we can't refresh them
+        if ($credentials->isExpired() && !$credentials->refresh_token) {
+            throw new \Exception('Akahu credentials have expired');
+        }
+
+        return $credentials;
+    }
+
     private function makeAuthenticatedRequest(string $method, string $endpoint, AkahuCredential $credentials): Response
     {
         if ($credentials->isExpired()) {
             $this->refreshCredentials($credentials);
-        }
-
-        // Build headers - for manual tokens, use both app_token and user_token
-        $headers = [
-            'Accept' => 'application/json',
-        ];
-
-        if ($credentials->app_token) {
-            // Using manual tokens - add both as headers
-            $headers['X-Akahu-ID'] = $credentials->app_token;
-            $headers['Authorization'] = 'Bearer ' . $credentials->access_token;
-        } else {
-            // Using OAuth - just use Bearer token
-            $headers['Authorization'] = 'Bearer ' . $credentials->access_token;
         }
 
         \Log::info('Making Akahu API request', [
@@ -148,20 +142,41 @@ class AkahuService
             'has_user_token' => !empty($credentials->access_token)
         ]);
 
-        $response = Http::withHeaders($headers)->$method($this->baseUrl . $endpoint);
+        $response = Http::withHeaders($this->buildHeaders($credentials))->$method($this->baseUrl . $endpoint);
 
-        \Log::info('Akahu API response', [
-            'status' => $response->status(),
-            'body' => $response->body()
-        ]);
+        \Log::info('Akahu API response', ['status' => $response->status()]);
 
-        if ($response->status() === 401) {
+        if ($response->status() === 401 && $credentials->refresh_token) {
             $this->refreshCredentials($credentials);
 
-            $response = Http::withHeaders($headers)->$method($this->baseUrl . $endpoint);
+            // Rebuild headers so the retry uses the refreshed token
+            $response = Http::withHeaders($this->buildHeaders($credentials))->$method($this->baseUrl . $endpoint);
+        }
+
+        if (!$response->successful()) {
+            \Log::warning('Akahu API request failed', [
+                'endpoint' => $endpoint,
+                'status' => $response->status(),
+                'body' => substr($response->body(), 0, 500),
+            ]);
         }
 
         return $response;
+    }
+
+    private function buildHeaders(AkahuCredential $credentials): array
+    {
+        $headers = [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $credentials->access_token,
+        ];
+
+        // Manual (app) tokens require the X-Akahu-ID header alongside the user token
+        if ($credentials->app_token) {
+            $headers['X-Akahu-ID'] = $credentials->app_token;
+        }
+
+        return $headers;
     }
 
     private function refreshCredentials(AkahuCredential $credentials): void

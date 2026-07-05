@@ -19,6 +19,9 @@ class AkahuCredential extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'accounts' => 'array',
+        'access_token' => 'encrypted',
+        'refresh_token' => 'encrypted',
+        'app_token' => 'encrypted',
     ];
 
     protected $hidden = [

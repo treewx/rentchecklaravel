@@ -32,20 +32,23 @@ class PropertyController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:255'],
             'rent_amount' => ['required', 'numeric', 'min:0'],
             'rent_due_day_of_week' => ['required', 'integer', 'min:0', 'max:6'],
             'rent_frequency' => ['required', 'string', 'in:weekly,fortnightly,monthly'],
             'rent_start_date' => ['nullable', 'date', 'after_or_equal:today'],
             'tenant_name' => ['nullable', 'string', 'max:255'],
             'tenant_email' => ['nullable', 'email', 'max:255'],
-            'notify_on_missed_payment' => ['boolean'],
             'grace_period_days' => ['required', 'integer', 'min:0', 'max:3'],
             'bank_statement_keyword' => ['required', 'string', 'max:255'],
         ]);
 
-        $property = auth()->user()->properties()->create($request->all());
+        // Unchecked checkboxes are absent from the request, so read them explicitly
+        $validated['notify_on_missed_payment'] = $request->boolean('notify_on_missed_payment');
+
+        $property = auth()->user()->properties()->create($validated);
 
         $this->createInitialRentCheck($property);
 
@@ -82,21 +85,25 @@ class PropertyController extends Controller
     {
         $this->authorize('update', $property);
 
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:255'],
             'rent_amount' => ['required', 'numeric', 'min:0'],
             'rent_due_day_of_week' => ['required', 'integer', 'min:0', 'max:6'],
             'rent_frequency' => ['required', 'string', 'in:weekly,fortnightly,monthly'],
-            'rent_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+            // Past start dates are valid on update — the tenancy may already have begun
+            'rent_start_date' => ['nullable', 'date'],
             'tenant_name' => ['nullable', 'string', 'max:255'],
             'tenant_email' => ['nullable', 'email', 'max:255'],
-            'notify_on_missed_payment' => ['boolean'],
             'grace_period_days' => ['required', 'integer', 'min:0', 'max:3'],
             'bank_statement_keyword' => ['required', 'string', 'max:255'],
-            'is_active' => ['boolean'],
         ]);
 
-        $property->update($request->all());
+        // Unchecked checkboxes are absent from the request, so read them explicitly
+        $validated['notify_on_missed_payment'] = $request->boolean('notify_on_missed_payment');
+        $validated['is_active'] = $request->boolean('is_active');
+
+        $property->update($validated);
 
         return redirect()->route('properties.show', $property)
             ->with('success', 'Property updated successfully');

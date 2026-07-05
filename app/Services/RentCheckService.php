@@ -190,7 +190,7 @@ class RentCheckService
         return $result;
     }
 
-    private function findMatchingTransactions(array $transactions, float $expectedAmount, Carbon $dueDate, string $keyword): array
+    public function findMatchingTransactions(array $transactions, float $expectedAmount, Carbon $dueDate, string $keyword): array
     {
         $matchingTransactions = [];
         $tolerance = 0.01;
@@ -302,21 +302,6 @@ class RentCheckService
     {
         // Use the property's next_rent_due_date attribute which handles rent_start_date logic
         return $property->next_rent_due_date;
-    }
-
-    private function getDayName(int $dayOfWeek): string
-    {
-        $days = [
-            0 => 'Sunday',
-            1 => 'Monday',
-            2 => 'Tuesday',
-            3 => 'Wednesday',
-            4 => 'Thursday',
-            5 => 'Friday',
-            6 => 'Saturday'
-        ];
-
-        return $days[$dayOfWeek] ?? 'Monday';
     }
 
     private function sendNotifications(array $userNotifications): void

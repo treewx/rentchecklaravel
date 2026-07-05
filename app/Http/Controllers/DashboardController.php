@@ -27,7 +27,8 @@ class DashboardController extends Controller
         $overdueRent = RentCheck::whereHas('property', function ($query) use ($user) {
             $query->where('user_id', $user->id);
         })
-        ->where('status', 'pending')
+        // 'pending' = not yet checked, 'late'/'partial' = checked and not fully paid
+        ->whereIn('status', ['pending', 'late', 'partial'])
         ->where('due_date', '<', now())
         ->with('property')
         ->orderBy('due_date')
