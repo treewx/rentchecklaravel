@@ -88,6 +88,123 @@
                 </form>
             </div>
         </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Profile</h5>
+            </div>
+            <div class="card-body">
+                @if (session('status') === 'profile-information-updated')
+                    <div class="alert alert-success">Profile updated successfully.</div>
+                @endif
+
+                <form method="POST" action="{{ route('user-profile-information.update') }}">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input type="text" class="form-control @if($errors->updateProfileInformation->has('name')) is-invalid @endif"
+                               id="name" name="name" value="{{ old('name', $user->name) }}" required>
+                        @if($errors->updateProfileInformation->has('name'))
+                            <div class="invalid-feedback">{{ $errors->updateProfileInformation->first('name') }}</div>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control @if($errors->updateProfileInformation->has('email')) is-invalid @endif"
+                               id="email" name="email" value="{{ old('email', $user->email) }}" required>
+                        @if($errors->updateProfileInformation->has('email'))
+                            <div class="invalid-feedback">{{ $errors->updateProfileInformation->first('email') }}</div>
+                        @endif
+                        <div class="form-text">Changing your email will require verifying the new address.</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Security</h5>
+            </div>
+            <div class="card-body">
+                @if (session('status') === 'password-updated')
+                    <div class="alert alert-success">Password changed successfully.</div>
+                @endif
+
+                <h6>Change Password</h6>
+                <form method="POST" action="{{ route('user-password.update') }}" class="mb-4">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">Current Password</label>
+                        <input type="password" class="form-control @if($errors->updatePassword->has('current_password')) is-invalid @endif"
+                               id="current_password" name="current_password" autocomplete="current-password" required>
+                        @if($errors->updatePassword->has('current_password'))
+                            <div class="invalid-feedback">{{ $errors->updatePassword->first('current_password') }}</div>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">New Password</label>
+                        <input type="password" class="form-control @if($errors->updatePassword->has('password')) is-invalid @endif"
+                               id="password" name="password" autocomplete="new-password" required>
+                        @if($errors->updatePassword->has('password'))
+                            <div class="invalid-feedback">{{ $errors->updatePassword->first('password') }}</div>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password_confirmation" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="password_confirmation"
+                               name="password_confirmation" autocomplete="new-password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+
+                <h6>Two-Factor Authentication</h6>
+                @if ($user->hasEnabledTwoFactorAuthentication())
+                    <p class="text-success mb-2"><i class="fas fa-check-circle"></i> Enabled</p>
+                    <p class="form-text">Two-factor authentication is required for all accounts and cannot be
+                        disabled while your bank account is connected.</p>
+                @else
+                    <p class="text-danger mb-2"><i class="fas fa-exclamation-circle"></i> Not enabled</p>
+                    <a href="{{ route('two-factor.setup') }}" class="btn btn-outline-primary">Set Up Two-Factor Authentication</a>
+                @endif
+            </div>
+        </div>
+
+        <div class="card mt-4 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Danger Zone</h5>
+            </div>
+            <div class="card-body">
+                <p>Permanently delete your account, including all properties, rent history and your
+                    bank connection. This cannot be undone.</p>
+
+                <form method="POST" action="{{ route('settings.account.delete') }}"
+                      onsubmit="return confirm('Are you sure? This permanently deletes your account and all data.');">
+                    @csrf
+                    @method('DELETE')
+
+                    <div class="mb-3">
+                        <label for="delete_password" class="form-label">Confirm your password to continue</label>
+                        <input type="password" class="form-control @error('password') is-invalid @enderror"
+                               id="delete_password" name="password" autocomplete="current-password" required>
+                        @error('password')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <button type="submit" class="btn btn-danger">Delete My Account</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 

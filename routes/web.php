@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AkahuController;
 use App\Http\Controllers\PropertyController;
@@ -44,16 +43,16 @@ Route::get('/cron/rent-check/{token}', function ($token) {
     }
 })->name('cron.rent-check');
 
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
-    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+// Login/register/logout, password reset, email verification and 2FA routes
+// are registered by Laravel Fortify (see FortifyServiceProvider for views).
+
+// 2FA setup lives outside the two-factor.required middleware so users who
+// haven't set it up yet can reach it.
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::view('/two-factor/setup', 'auth.two-factor-setup')->name('two-factor.setup');
 });
 
-Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
+Route::middleware(['auth', 'verified', 'two-factor.required'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('akahu')->name('akahu.')->group(function () {
@@ -73,5 +72,6 @@ Route::middleware('auth')->group(function () {
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
         Route::post('/email-preferences', [SettingsController::class, 'updateEmailPreferences'])->name('email-preferences');
+        Route::delete('/account', [SettingsController::class, 'deleteAccount'])->name('account.delete');
     });
 });

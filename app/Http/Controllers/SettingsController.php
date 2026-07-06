@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SettingsController extends Controller
 {
@@ -32,5 +33,25 @@ class SettingsController extends Controller
 
         return redirect()->route('settings.index')
             ->with('success', 'Email preferences updated successfully');
+    }
+
+    public function deleteAccount(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        Auth::logout();
+
+        // DB cascades remove properties, rent checks, transactions and the
+        // Akahu credentials (bank tokens) along with the user
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/')->with('success', 'Your account and all associated data have been deleted.');
     }
 }

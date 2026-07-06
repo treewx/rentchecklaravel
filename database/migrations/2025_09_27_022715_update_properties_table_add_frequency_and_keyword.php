@@ -11,13 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // One operation per call - SQLite cannot combine renames in a single table modification
         Schema::table('properties', function (Blueprint $table) {
             // Change account_id to bank_statement_keyword
             $table->renameColumn('account_id', 'bank_statement_keyword');
+        });
 
+        Schema::table('properties', function (Blueprint $table) {
             // Change rent_due_day to store day of week (0-6, Sunday-Saturday)
             $table->renameColumn('rent_due_day', 'rent_due_day_of_week');
+        });
 
+        Schema::table('properties', function (Blueprint $table) {
             // Add rent frequency field
             $table->enum('rent_frequency', ['weekly', 'fortnightly', 'monthly'])->default('monthly');
         });
@@ -29,9 +34,14 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('properties', function (Blueprint $table) {
-            // Reverse the changes
             $table->renameColumn('bank_statement_keyword', 'account_id');
+        });
+
+        Schema::table('properties', function (Blueprint $table) {
             $table->renameColumn('rent_due_day_of_week', 'rent_due_day');
+        });
+
+        Schema::table('properties', function (Blueprint $table) {
             $table->dropColumn('rent_frequency');
         });
     }
