@@ -93,7 +93,7 @@ class RentCheckService
         $this->sendNotifications($userNotifications);
 
         // Send email notifications to tenants for missed payments
-        $this->sendTenantNotifications($userNotifications);
+        $this->sendTenantNotifications();
 
         return $results;
     }
@@ -177,9 +177,13 @@ class RentCheckService
                 Log::info("Skipping duplicate payment transaction for rent check #{$rentCheck->id} - existing transaction found");
             }
         } else {
-            if ($rentCheck->due_date->isPast()) {
+            // Not late until the morning after the due date - payments dated
+            // on the due date settle overnight and Akahu needs time to sync
+            if (now()->greaterThanOrEqualTo($rentCheck->lateAfter())) {
                 $rentCheck->status = 'late';
-                $result = 'late';
+                // Only report the transition to late; re-checks of an
+                // already-late rent shouldn't trigger repeat notifications
+                $result = $previousStatus === 'late' ? 'still-late' : 'late';
             } else {
                 $result = 'pending';
             }
@@ -354,63 +358,64 @@ class RentCheckService
         }
     }
 
-    private function sendTenantNotifications(array $userNotifications): void
+    /**
+     * Notify tenants about missed payments. Queries the database directly
+     * (rather than relying on this run's results) so a notification delayed
+     * by a grace period is still sent by a later run, and tenant_notified_at
+     * guarantees each missed payment is emailed at most once.
+     */
+    private function sendTenantNotifications(): void
     {
-        foreach ($userNotifications as $userId => $notificationData) {
-            $results = $notificationData['results'];
+        $candidates = RentCheck::with('property')
+            ->whereIn('status', ['late', 'partial'])
+            ->whereNull('tenant_notified_at')
+            ->where('due_date', '>=', now()->subDays(30))
+            ->get();
 
-            // Only send notifications to tenants for late and partial payments
-            $missedPayments = array_merge($results['late'], $results['partial']);
+        foreach ($candidates as $rentCheck) {
+            $property = $rentCheck->property;
 
-            foreach ($missedPayments as $paymentData) {
-                $property = $paymentData['property'];
-                $rentCheck = $paymentData['rent_check'];
+            if (empty($property->tenant_email) || !$property->notify_on_missed_payment) {
+                continue;
+            }
 
-                // Check if the property has tenant email and notification is enabled
-                if (empty($property->tenant_email) || !$property->notify_on_missed_payment) {
-                    Log::info('Skipping tenant notification for property: ' . $property->name, [
-                        'has_email' => !empty($property->tenant_email),
-                        'notify_enabled' => $property->notify_on_missed_payment
-                    ]);
-                    continue;
-                }
+            // Grace period counts from the moment the rent became late
+            // (the morning after the due date), not from midnight
+            $gracePeriodDays = $property->grace_period_days ?? 0;
+            $notifyFrom = $rentCheck->lateAfter()->addDays($gracePeriodDays);
 
-                $gracePeriodDays = $property->grace_period_days ?? 0;
-                $notifyDate = $rentCheck->due_date->copy()->addDays($gracePeriodDays);
+            if (now()->isBefore($notifyFrom)) {
+                Log::info('Tenant notification still in grace period for property: ' . $property->name, [
+                    'grace_period_days' => $gracePeriodDays,
+                    'notify_from' => $notifyFrom->toDateTimeString(),
+                ]);
+                continue;
+            }
 
-                if (now()->isBefore($notifyDate)) {
-                    Log::info('Skipping tenant notification due to grace period for property: ' . $property->name, [
-                        'grace_period' => $gracePeriodDays,
-                        'notify_date' => $notifyDate->toDateString()
-                    ]);
-                    continue;
-                }
+            try {
+                Log::info('Sending missed payment notification to tenant: ' . $property->tenant_email, [
+                    'property' => $property->name,
+                    'rent_check_id' => $rentCheck->id,
+                    'status' => $rentCheck->status
+                ]);
 
-                try {
-                    Log::info('Sending missed payment notification to tenant: ' . $property->tenant_email, [
-                        'property' => $property->name,
-                        'rent_check_id' => $rentCheck->id,
-                        'status' => $rentCheck->status
-                    ]);
+                $tenant = new TenantNotifiable(
+                    $property->tenant_email,
+                    $property->tenant_name ?? 'Tenant'
+                );
 
-                    // Create a notifiable object for the tenant
-                    $tenant = new TenantNotifiable(
-                        $property->tenant_email,
-                        $property->tenant_name ?? 'Tenant'
-                    );
+                $tenant->notify(new TenantMissedPaymentNotification($property, $rentCheck));
 
-                    // Send the notification
-                    $tenant->notify(new TenantMissedPaymentNotification($property, $rentCheck));
+                $rentCheck->update(['tenant_notified_at' => now()]);
 
-                    Log::info('Tenant notification sent successfully to: ' . $property->tenant_email);
-                } catch (\Exception $e) {
-                    Log::error('Failed to send tenant notification', [
-                        'property' => $property->name,
-                        'tenant_email' => $property->tenant_email,
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
-                }
+                Log::info('Tenant notification sent successfully to: ' . $property->tenant_email);
+            } catch (\Exception $e) {
+                Log::error('Failed to send tenant notification', [
+                    'property' => $property->name,
+                    'tenant_email' => $property->tenant_email,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
             }
         }
     }

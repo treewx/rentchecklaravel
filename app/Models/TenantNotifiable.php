@@ -28,4 +28,13 @@ class TenantNotifiable
     {
         return $this->email;
     }
+
+    /**
+     * Identify this notifiable by email (required by the notification
+     * system, e.g. Notification::fake(), since this is not an Eloquent model).
+     */
+    public function getKey(): string
+    {
+        return $this->email;
+    }
 }

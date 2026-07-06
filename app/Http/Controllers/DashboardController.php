@@ -14,12 +14,15 @@ class DashboardController extends Controller
 
         $properties = $user->properties()->with('rentChecks')->get();
 
+        // Day-based comparisons: a check due today is "upcoming" all day, and
+        // only counts as overdue from the day after its due date (rent isn't
+        // marked late until the morning after - see RentCheck::lateAfter())
         $upcomingRent = RentCheck::whereHas('property', function ($query) use ($user) {
             $query->where('user_id', $user->id);
         })
         ->where('status', 'pending')
-        ->where('due_date', '>=', now())
-        ->where('due_date', '<=', now()->addDays(7))
+        ->whereDate('due_date', '>=', today())
+        ->whereDate('due_date', '<=', today()->addDays(7))
         ->with('property')
         ->orderBy('due_date')
         ->get();
@@ -29,7 +32,7 @@ class DashboardController extends Controller
         })
         // 'pending' = not yet checked, 'late'/'partial' = checked and not fully paid
         ->whereIn('status', ['pending', 'late', 'partial'])
-        ->where('due_date', '<', now())
+        ->whereDate('due_date', '<', today())
         ->with('property')
         ->orderBy('due_date')
         ->get();

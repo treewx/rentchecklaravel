@@ -79,7 +79,7 @@
                                 {{ $property->next_rent_due_date->format('M j, Y') }}
                                 <br>
                                 <small class="text-muted">
-                                    ({{ $property->next_rent_due_date->diffForHumans() }})
+                                    ({{ \App\Models\RentCheck::describeDueDate($property->next_rent_due_date) }})
                                 </small>
                             </div>
                         </div>
@@ -123,7 +123,7 @@
                                                     {{ $rentCheck->due_date->format('M j, Y') }}
                                                     <br>
                                                     <small class="text-muted">
-                                                        {{ $rentCheck->due_date->diffForHumans() }}
+                                                        {{ $rentCheck->dueDescription() }}
                                                     </small>
                                                 </td>
                                                 <td>${{ number_format($rentCheck->expected_amount, 2) }}</td>

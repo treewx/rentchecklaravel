@@ -61,7 +61,7 @@
                                         <div class="fw-bold">${{ number_format($rentCheck->expected_amount, 2) }}</div>
                                         <small class="text-danger">
                                             Due {{ $rentCheck->due_date->format('M j, Y') }}
-                                            ({{ $rentCheck->due_date->diffForHumans() }})
+                                            ({{ $rentCheck->dueDescription() }})
                                         </small>
                                     </div>
                                 </div>
@@ -92,7 +92,7 @@
                                         <div class="fw-bold">${{ number_format($rentCheck->expected_amount, 2) }}</div>
                                         <small class="text-warning">
                                             Due {{ $rentCheck->due_date->format('M j, Y') }}
-                                            ({{ $rentCheck->due_date->diffForHumans() }})
+                                            ({{ $rentCheck->dueDescription() }})
                                         </small>
                                     </div>
                                 </div>
